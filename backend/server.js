@@ -51,7 +51,32 @@ const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: "100kb" }));
 if (config.corsAllowedOrigins && config.corsAllowedOrigins.length > 0) {
-  app.use(cors({ origin: config.corsAllowedOrigins }));
+  // Support wildcard subdomains: "*.bellezza.com.sg" matches any subdomain
+  const wildcardPatterns = config.corsAllowedOrigins
+    .filter((o) => o.startsWith("*."))
+    .map((o) => o.slice(2)); // e.g. "*.bellezza.com.sg" → "bellezza.com.sg"
+  const exactOrigins = config.corsAllowedOrigins.filter((o) => !o.startsWith("*."));
+
+  app.use(
+    cors({
+      origin: function (origin, callback) {
+        if (!origin) return callback(null, true); // allow non-browser requests
+        // Check exact matches (e.g. "https://bellezza.com.sg")
+        if (exactOrigins.includes(origin)) return callback(null, true);
+        // Check wildcard subdomain matches (e.g. "*.bellezza.com.sg")
+        for (const domain of wildcardPatterns) {
+          if (
+            origin.endsWith("." + domain) ||
+            origin === "https://" + domain ||
+            origin === "http://" + domain
+          ) {
+            return callback(null, true);
+          }
+        }
+        callback(new Error("CORS not allowed"));
+      },
+    })
+  );
 } else {
   // Dev mode: allow all origins but warn in production
   app.use(cors());
