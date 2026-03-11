@@ -92,7 +92,8 @@ function authenticateApiKey(req, res, next) {
 // SERVE TRACKER SCRIPT
 // =============================================
 app.get("/tracker.js", (req, res) => {
-  res.sendFile(path.join(__dirname, "..", "frontend", "whatsapp-tracker.js"));
+  res.setHeader("Content-Type", "application/javascript");
+  res.sendFile(path.join(__dirname, "public", "tracker.js"));
 });
 
 // =============================================
