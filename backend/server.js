@@ -9,6 +9,7 @@
  * - Health check endpoint
  */
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const config = require("./config");
 const database = require("./database");
@@ -86,6 +87,13 @@ function authenticateApiKey(req, res, next) {
 
   next();
 }
+
+// =============================================
+// SERVE TRACKER SCRIPT
+// =============================================
+app.get("/tracker.js", (req, res) => {
+  res.sendFile(path.join(__dirname, "..", "frontend", "whatsapp-tracker.js"));
+});
 
 // =============================================
 // HEALTH CHECK
