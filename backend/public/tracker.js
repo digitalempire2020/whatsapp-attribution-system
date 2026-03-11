@@ -21,7 +21,7 @@
   // =============================================
   const CONFIG = {
     // Your backend server URL (Express)
-    API_URL: "https://YOUR_SERVER_URL",
+    API_URL: window.__WA_TRACKER_API_URL || "https://whatsapp-attribution-system.onrender.com",
 
     // CSS selectors that match WhatsApp buttons/links on the site
     WHATSAPP_SELECTORS: [
