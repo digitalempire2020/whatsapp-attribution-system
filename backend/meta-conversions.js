@@ -224,6 +224,9 @@ async function sendMetaConversion(conversion, click, message = null) {
   // Send to Facebook
   const url = `${META_BASE_URL}/${config.meta.pixelId}/events`;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -231,7 +234,8 @@ async function sendMetaConversion(conversion, click, message = null) {
       "Authorization": `Bearer ${config.meta.accessToken}`,
     },
     body: JSON.stringify(requestBody),
-  });
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeout));
 
   const responseBody = await response.text();
   const success = response.ok;

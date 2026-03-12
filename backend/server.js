@@ -10,6 +10,7 @@
  */
 const express = require("express");
 const path = require("path");
+const crypto = require("crypto");
 const cors = require("cors");
 const config = require("./config");
 const database = require("./database");
@@ -94,8 +95,44 @@ if (config.corsAllowedOrigins && config.corsAllowedOrigins.length > 0) {
   }
 }
 
-// Trust proxy for accurate IP when behind reverse proxy
-app.set("trust proxy", true);
+// Trust first proxy hop only (Render's reverse proxy) — prevents IP spoofing
+app.set("trust proxy", 1);
+
+// =============================================
+// SIMPLE IN-MEMORY RATE LIMITER
+// =============================================
+// Protects public tracking endpoints from abuse (100 requests per minute per IP)
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX = 100;
+
+// Clean stale entries every 5 minutes to prevent memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of rateLimitMap) {
+    if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS * 2) {
+      rateLimitMap.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
+function rateLimit(req, res, next) {
+  const ip = req.ip || "unknown";
+  const now = Date.now();
+  let entry = rateLimitMap.get(ip);
+
+  if (!entry || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+    entry = { count: 1, windowStart: now };
+    rateLimitMap.set(ip, entry);
+    return next();
+  }
+
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX) {
+    return res.status(429).json({ error: "Too many requests" });
+  }
+  next();
+}
 
 // =============================================
 // API KEY AUTHENTICATION MIDDLEWARE
@@ -161,7 +198,16 @@ app.get("/r/:code", (req, res) => {
   try {
     const click = database.getClickByCode(code);
     if (click && click.page_url) {
-      return res.redirect(302, click.page_url);
+      // Validate the redirect URL to prevent open redirect attacks
+      try {
+        const targetUrl = new URL(click.page_url);
+        if (targetUrl.hostname.endsWith("bellezza.com.sg")) {
+          return res.redirect(302, click.page_url);
+        }
+        console.warn(`[Redirect] Blocked redirect to untrusted domain: ${targetUrl.hostname}`);
+      } catch (urlErr) {
+        console.warn(`[Redirect] Invalid page_url stored: ${click.page_url}`);
+      }
     }
   } catch (err) {
     console.error("[Redirect] Lookup error:", err.message);
@@ -173,7 +219,7 @@ app.get("/r/:code", (req, res) => {
 // =============================================
 // FRONTEND TRACKING - Page Views
 // =============================================
-app.post("/api/track/pageview", (req, res) => {
+app.post("/api/track/pageview", rateLimit, (req, res) => {
   try {
     const data = req.body;
     data.ip_address = req.ip;
@@ -194,7 +240,7 @@ app.post("/api/track/pageview", (req, res) => {
 // =============================================
 // FRONTEND TRACKING - WhatsApp Clicks
 // =============================================
-app.post("/api/track/click", (req, res) => {
+app.post("/api/track/click", rateLimit, (req, res) => {
   try {
     const data = req.body;
     data.ip_address = req.ip;
@@ -221,10 +267,12 @@ app.post("/api/track/click", (req, res) => {
 // =============================================
 app.post("/webhook/whapi", async (req, res) => {
   try {
-    // Verify webhook authenticity
+    // Verify webhook authenticity (constant-time comparison to prevent timing attacks)
     if (config.whapi.webhookSecret) {
       const providedToken = req.query.token || req.headers["x-webhook-token"] || "";
-      if (providedToken !== config.whapi.webhookSecret) {
+      const expected = Buffer.from(config.whapi.webhookSecret);
+      const provided = Buffer.from(providedToken);
+      if (expected.length !== provided.length || !crypto.timingSafeEqual(expected, provided)) {
         console.warn("[Webhook] Invalid or missing webhook token");
         return res.status(401).json({ error: "Invalid webhook token" });
       }

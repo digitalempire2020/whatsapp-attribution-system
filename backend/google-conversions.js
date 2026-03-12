@@ -29,6 +29,9 @@ const GOOGLE_ADS_BASE_URL = `https://googleads.googleapis.com/${GOOGLE_ADS_API_V
  * Get a fresh access token using the refresh token.
  */
 async function getAccessToken() {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -38,7 +41,8 @@ async function getAccessToken() {
       refresh_token: config.googleAds.refreshToken,
       grant_type: "refresh_token",
     }),
-  });
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeout));
 
   if (!response.ok) {
     const error = await response.text();
@@ -106,6 +110,9 @@ async function sendGoogleConversion(conversion, click) {
 
   const url = `${GOOGLE_ADS_BASE_URL}/customers/${config.googleAds.customerId}:uploadClickConversions`;
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -114,7 +121,8 @@ async function sendGoogleConversion(conversion, click) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
-  });
+    signal: controller.signal,
+  }).finally(() => clearTimeout(timeout));
 
   const responseBody = await response.text();
   const success = response.ok;
