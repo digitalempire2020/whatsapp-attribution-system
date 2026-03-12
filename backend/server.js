@@ -117,8 +117,22 @@ function authenticateApiKey(req, res, next) {
 // SERVE TRACKER SCRIPT
 // =============================================
 app.get("/tracker.js", (req, res) => {
+  const fs = require("fs");
+  const filePath = path.join(__dirname, "public", "tracker.js");
+  let content = fs.readFileSync(filePath, "utf8");
+  // Dynamically inject the server URL so the placeholder is never used
+  const serverUrl = `${req.protocol}://${req.get("host")}`;
+  content = content.replace(
+    /API_URL:\s*window\.__WA_TRACKER_API_URL\s*\|\|\s*"[^"]*"/,
+    `API_URL: window.__WA_TRACKER_API_URL || "${serverUrl}"`
+  );
+  content = content.replace(
+    /API_URL:\s*"https:\/\/YOUR_SERVER_URL"/,
+    `API_URL: window.__WA_TRACKER_API_URL || "${serverUrl}"`
+  );
   res.setHeader("Content-Type", "application/javascript");
-  res.sendFile(path.join(__dirname, "public", "tracker.js"));
+  res.setHeader("Cache-Control", "public, max-age=300"); // 5 min cache
+  res.send(content);
 });
 
 // =============================================
