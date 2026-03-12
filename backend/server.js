@@ -151,6 +151,25 @@ app.get("/health", (req, res) => {
 });
 
 // =============================================
+// REDIRECT - /r/:code → original landing page
+// =============================================
+// When the priority code appears as a URL (e.g. fatfreeze.bellezza.com.sg/r/D9C9PTD9)
+// in the WhatsApp message, tapping it hits this route and redirects to the original page.
+app.get("/r/:code", (req, res) => {
+  const code = "WA-" + req.params.code.toUpperCase();
+  try {
+    const click = database.getClickByCode(code);
+    if (click && click.page_url) {
+      return res.redirect(302, click.page_url);
+    }
+  } catch (err) {
+    console.error("[Redirect] Lookup error:", err.message);
+  }
+  // Fallback: redirect to main domain
+  res.redirect(302, "https://bellezza.com.sg");
+});
+
+// =============================================
 // FRONTEND TRACKING - Page Views
 // =============================================
 app.post("/api/track/pageview", (req, res) => {

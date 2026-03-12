@@ -18,7 +18,7 @@ const TIME_PROXIMITY_WINDOW_MINUTES = 5;
 
 /**
  * Extract a priority code from message text.
- * Looks for patterns like [Code: WA-XXXXXXXX] in the message.
+ * Looks for patterns like [Code: WA-XXXXXXXX] or bellezza.com.sg/r/XXXXXXXX
  *
  * @param {string} text - The WhatsApp message text.
  * @returns {string|null} The extracted priority code or null.
@@ -26,7 +26,7 @@ const TIME_PROXIMITY_WINDOW_MINUTES = 5;
 function extractPriorityCode(text) {
   if (!text) return null;
 
-  // Pattern 1: [Code: WA-XXXXXXXX]
+  // Pattern 1: [Code: WA-XXXXXXXX] (legacy format)
   const bracketMatch = text.match(/\[Code:\s*(WA-[A-Z0-9]{6,12})\]/i);
   if (bracketMatch) return bracketMatch[1].toUpperCase();
 
@@ -34,7 +34,11 @@ function extractPriorityCode(text) {
   const plainMatch = text.match(/Code:\s*(WA-[A-Z0-9]{6,12})/i);
   if (plainMatch) return plainMatch[1].toUpperCase();
 
-  // Pattern 3: Just the code itself (WA-XXXXXXXX)
+  // Pattern 3: URL format — domain.com/r/XXXXXXXX (new format)
+  const urlMatch = text.match(/[\w.-]+\/r\/([A-Z0-9]{6,12})\b/i);
+  if (urlMatch) return "WA-" + urlMatch[1].toUpperCase();
+
+  // Pattern 4: Just the code itself (WA-XXXXXXXX)
   const standaloneMatch = text.match(/\b(WA-[A-Z0-9]{6,12})\b/i);
   if (standaloneMatch) return standaloneMatch[1].toUpperCase();
 
