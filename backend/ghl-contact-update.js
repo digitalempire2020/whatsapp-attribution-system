@@ -178,27 +178,36 @@ async function updateContactUTM(contactId, utmData, clickId) {
     return false;
   }
 
+  // Collect our target field IDs so we only check those
+  const targetFieldIds = new Set(customFields.map((f) => f.id));
+
   try {
-    // First, check if contact already has UTM data (avoid overwriting)
+    // First, check if contact already has UTM data (avoid overwriting first-touch)
     const contactResult = await ghlRequest("GET", `/contacts/${contactId}`);
 
     if (contactResult.ok) {
       const existingFields = contactResult.data.contact?.customFields || [];
-      const existingFieldIds = new Set();
+      const populatedFieldIds = new Set();
 
       for (const cf of existingFields) {
         const id = cf.id || cf.fieldKey;
-        const val = cf.value || cf.fieldValue;
-        if (id && val && String(val).trim()) {
-          existingFieldIds.add(id);
+        // Only check fields we care about (our UTM field IDs)
+        if (!id || !targetFieldIds.has(id)) continue;
+
+        const val = cf.value ?? cf.fieldValue ?? cf.field_value ?? "";
+        const strVal = typeof val === "string" ? val.trim() : "";
+
+        if (strVal) {
+          populatedFieldIds.add(id);
+          console.log(`[GHL] Field ${id} already has value: "${strVal.substring(0, 50)}"`);
         }
       }
 
-      // Filter out fields that already have values
-      const newFields = customFields.filter((f) => !existingFieldIds.has(f.id));
+      // Filter out fields that already have real string values
+      const newFields = customFields.filter((f) => !populatedFieldIds.has(f.id));
 
       if (newFields.length === 0) {
-        console.log(`[GHL] Contact ${contactId} already has UTM data, skipping update`);
+        console.log(`[GHL] Contact ${contactId} already has all ${populatedFieldIds.size} UTM fields, skipping`);
 
         database.insertGHLUpdateEvent({
           click_id: clickId,
@@ -211,6 +220,8 @@ async function updateContactUTM(contactId, utmData, clickId) {
 
         return true;
       }
+
+      console.log(`[GHL] Writing ${newFields.length} new UTM fields (${populatedFieldIds.size} already populated)`);
 
       // Use only the new fields
       customFields.length = 0;
