@@ -81,6 +81,7 @@ if (config.corsAllowedOrigins && config.corsAllowedOrigins.length > 0) {
             return callback(null, true);
           }
         }
+        console.warn(`[CORS] Rejected origin: ${origin}`);
         callback(new Error("CORS not allowed"));
       },
     })

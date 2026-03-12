@@ -2,7 +2,7 @@
  * Google Enhanced Conversions Integration
  * ========================================
  * Sends offline conversion data back to Google Ads using the
- * Google Ads API v16 Enhanced Conversions for Leads.
+ * Google Ads API v20 Enhanced Conversions for Leads.
  *
  * This uses the GCLID (Google Click ID) captured from the visitor's
  * original ad click to attribute the WhatsApp conversion back to
@@ -22,7 +22,7 @@
 const fetch = require("node-fetch");
 const config = require("./config");
 
-const GOOGLE_ADS_API_VERSION = "v18";
+const GOOGLE_ADS_API_VERSION = "v20";
 const GOOGLE_ADS_BASE_URL = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}`;
 
 /**
