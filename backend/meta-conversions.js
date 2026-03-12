@@ -180,7 +180,9 @@ async function sendMetaConversion(conversion, click, message = null) {
   }
 
   // Build the event payload
-  const eventTime = Math.floor(new Date(conversion.converted_at).getTime() / 1000);
+  const eventTime = conversion.converted_at
+    ? Math.floor(new Date(conversion.converted_at).getTime() / 1000)
+    : Math.floor(Date.now() / 1000);
   const eventName = mapConversionTypeToFbEvent(conversion.conversion_type);
 
   const eventPayload = {

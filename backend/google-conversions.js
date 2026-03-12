@@ -85,7 +85,7 @@ async function sendGoogleConversion(conversion, click) {
   const conversionData = {
     conversionAction: conversionAction,
     // When the conversion happened — use visitor's timezone for accurate attribution
-    conversionDateTime: formatGoogleDateTime(conversion.converted_at, click.timezone),
+    conversionDateTime: formatGoogleDateTime(conversion.converted_at || new Date().toISOString(), click.timezone),
     // Conversion value (revenue)
     conversionValue: conversion.conversion_value || 0,
     currencyCode: conversion.currency || "SGD",
