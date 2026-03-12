@@ -50,6 +50,14 @@ function sanitizeObject(obj) {
 const app = express();
 app.disable('x-powered-by');
 app.use(express.json({ limit: "100kb" }));
+// sendBeacon sends text/plain to avoid CORS preflight — parse it as JSON
+app.use(express.text({ limit: "100kb", type: "text/plain" }));
+app.use((req, res, next) => {
+  if (typeof req.body === "string" && req.body.startsWith("{")) {
+    try { req.body = JSON.parse(req.body); } catch (e) { /* leave as string */ }
+  }
+  next();
+});
 if (config.corsAllowedOrigins && config.corsAllowedOrigins.length > 0) {
   // Support wildcard subdomains: "*.bellezza.com.sg" matches any subdomain
   const wildcardPatterns = config.corsAllowedOrigins
