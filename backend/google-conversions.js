@@ -110,19 +110,23 @@ async function sendGoogleConversion(conversion, click) {
 
   const url = `${GOOGLE_ADS_BASE_URL}/customers/${config.googleAds.customerId}:uploadClickConversions`;
 
+  console.log(`[Google] Config: customerId=${config.googleAds.customerId}, loginCustomerId=${config.googleAds.loginCustomerId || "NOT SET"}, conversionActionId=${config.googleAds.conversionActionId}`);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
+  const headers = {
+    Authorization: `Bearer ${accessToken}`,
+    "developer-token": config.googleAds.developerToken,
+    "Content-Type": "application/json",
+  };
+  if (config.googleAds.loginCustomerId) {
+    headers["login-customer-id"] = config.googleAds.loginCustomerId;
+  }
+
   const response = await fetch(url, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "developer-token": config.googleAds.developerToken,
-      "Content-Type": "application/json",
-      ...(config.googleAds.loginCustomerId && {
-        "login-customer-id": config.googleAds.loginCustomerId,
-      }),
-    },
+    headers,
     body: JSON.stringify(payload),
     signal: controller.signal,
   }).finally(() => clearTimeout(timeout));
