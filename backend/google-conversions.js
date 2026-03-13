@@ -119,6 +119,9 @@ async function sendGoogleConversion(conversion, click) {
       Authorization: `Bearer ${accessToken}`,
       "developer-token": config.googleAds.developerToken,
       "Content-Type": "application/json",
+      ...(config.googleAds.loginCustomerId && {
+        "login-customer-id": config.googleAds.loginCustomerId,
+      }),
     },
     body: JSON.stringify(payload),
     signal: controller.signal,

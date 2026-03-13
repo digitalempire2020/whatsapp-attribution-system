@@ -24,6 +24,7 @@ const config = {
     refreshToken: process.env.GOOGLE_ADS_REFRESH_TOKEN,
     clientId: process.env.GOOGLE_ADS_CLIENT_ID,
     clientSecret: process.env.GOOGLE_ADS_CLIENT_SECRET,
+    loginCustomerId: process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID?.replace(/-/g, ""),
   },
 
   // Meta / Facebook
