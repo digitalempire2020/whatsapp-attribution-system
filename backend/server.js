@@ -317,15 +317,24 @@ app.post("/webhook/whapi", async (req, res) => {
       `[Webhook] Message saved. Match: ${matchResult.method} (confidence: ${matchResult.confidence})`
     );
 
-    // Push UTM data to GHL contact (fire-and-forget)
-    if (matchResult.clickId && config.ghl && config.ghl.apiKey) {
+    // Log time proximity matches as informational only — no action taken
+    if (matchResult.method === "time_proximity") {
+      console.log(
+        `[Webhook] Time proximity match (click ${matchResult.clickId}) logged but NOT auto-fired — requires priority code for conversion`
+      );
+    }
+
+    // Push UTM data to GHL contact ONLY for priority code matches
+    // Time proximity matches risk pushing wrong UTM data to unrelated contacts
+    if (matchResult.clickId && matchResult.method === "priority_code" && config.ghl && config.ghl.apiKey) {
       pushUTMToGHL(matchResult, messageData, savedMessage.id).catch((err) =>
         console.error("[GHL] Push failed:", err.message)
       );
     }
 
-    // Auto-fire Lead conversion when message is matched to a click
-    if (matchResult.clickId && matchResult.method !== "unmatched") {
+    // Auto-fire Lead conversion ONLY for high-confidence priority code matches
+    // Time proximity matches are too unreliable (can match any message to any click)
+    if (matchResult.clickId && matchResult.method === "priority_code") {
       try {
         const click = database.getClickById(matchResult.clickId);
         if (click) {
